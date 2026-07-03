@@ -12,7 +12,7 @@ let mistModulePromise: Promise<MistModule> | undefined
  */
 export async function loadMistModule(): Promise<MistModule | undefined> {
   if (!mistModulePromise) {
-    mistModulePromise = import(/* @vite-ignore */ '../vendor/mistlib-wasm/mistlib_wasm.js').then(async (module) => {
+    mistModulePromise = import('../vendor/mistlib-wasm/mistlib_wasm.js').then(async (module) => {
       await module.default()
       return module
     })
