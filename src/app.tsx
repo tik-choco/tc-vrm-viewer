@@ -53,7 +53,7 @@ export function App(): JSX.Element {
   }, [])
 
   useEffect(() => {
-    listLibraryModels().then(setModels).catch(() => setError('ライブラリの読み込みに失敗しました'))
+    listLibraryModels().then(setModels).catch(() => setError('Failed to load the library'))
   }, [])
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export function App(): JSX.Element {
       autoBlinkStepRef.current = autoBlink ? createAutoBlink(vrm) : null
       setError(undefined)
     } catch {
-      setError('VRMファイルの読み込みに失敗しました')
+      setError('Failed to load the VRM file')
     }
   }
 
@@ -102,7 +102,7 @@ export function App(): JSX.Element {
           await showVrmBytes(bytes)
         }
       } catch {
-        setError(`${file.name} の取り込みに失敗しました`)
+        setError(`Failed to import ${file.name}`)
       }
     }
   }
@@ -143,7 +143,7 @@ export function App(): JSX.Element {
       if (!file?.dataUrl) return
       addModelToLibrary({ name: file.name, mimeType: file.mimeType, size: file.size, dataUrl: file.dataUrl, checksum: file.checksum })
         .then((record) => setModels((prev) => [record, ...prev]))
-        .catch(() => setError('受信したVRMファイルの保存に失敗しました'))
+        .catch(() => setError('Failed to save the received VRM file'))
     })
     setRoomId(nextRoomId)
     setConnected(true)

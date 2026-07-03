@@ -10,13 +10,13 @@ type ExpressionPanelProps = {
 
 export function ExpressionPanel({ expressionNames, weights, onChange, autoBlink, onToggleAutoBlink }: ExpressionPanelProps): JSX.Element {
   if (expressionNames.length === 0) {
-    return <p class="panel-empty">モデルを読み込むと表情スライダーが表示されます</p>
+    return <p class="panel-empty">Load a model to see expression sliders</p>
   }
   return (
     <div class="expression-panel">
       <label class="expression-panel__toggle">
         <input type="checkbox" checked={autoBlink} onChange={(event) => onToggleAutoBlink(event.currentTarget.checked)} />
-        自動まばたき
+        Auto-blink
       </label>
       {expressionNames.map((name) => (
         <label key={name} class="expression-panel__row">

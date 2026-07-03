@@ -31,9 +31,9 @@ export function DropZone({ onFiles }: DropZoneProps): JSX.Element {
       onDragLeave={() => setIsOver(false)}
       onDrop={handleDrop}
     >
-      <p>.vrm ファイルまたは bundle JSON をドロップ</p>
+      <p>Drop a .vrm file or bundle JSON</p>
       <label class="drop-zone__picker">
-        ファイルを選択
+        Choose a file
         <input type="file" accept=".vrm,.json" multiple onChange={handleInputChange} />
       </label>
     </div>

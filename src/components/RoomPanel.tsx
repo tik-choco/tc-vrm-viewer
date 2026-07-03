@@ -16,9 +16,9 @@ export function RoomPanel({ mistAvailable, roomId, connected, peers, onJoin, onL
   if (!mistAvailable) {
     return (
       <div class="room-panel room-panel--setup">
-        <p>mistlib-wasm がまだビルドされていません。</p>
+        <p>mistlib-wasm has not been built yet.</p>
         <p>
-          <code>.env</code> に <code>MISTLIB_REPO</code> を設定し、<code>npm run build:mistlib</code> を実行してください。
+          Set <code>MISTLIB_REPO</code> in <code>.env</code>, then run <code>npm run build:mistlib</code>.
         </p>
       </div>
     )
@@ -28,11 +28,11 @@ export function RoomPanel({ mistAvailable, roomId, connected, peers, onJoin, onL
     return (
       <div class="room-panel">
         <p>
-          ルーム <strong>{roomId}</strong> に接続中（受信専用）
+          Connected to room <strong>{roomId}</strong> (receive-only)
         </p>
-        <p class="room-panel__peers">接続ピア: {peers.length}</p>
+        <p class="room-panel__peers">Connected peers: {peers.length}</p>
         <button type="button" onClick={onLeave}>
-          退出
+          Leave
         </button>
       </div>
     )
@@ -47,15 +47,15 @@ export function RoomPanel({ mistAvailable, roomId, connected, peers, onJoin, onL
       }}
     >
       <label>
-        ルームID
+        Room ID
         <input
           type="text"
           value={draftRoomId}
           onInput={(event) => setDraftRoomId(event.currentTarget.value)}
-          placeholder="tc-storage のルームID"
+          placeholder="tc-storage room ID"
         />
       </label>
-      <button type="submit">参加（受信専用）</button>
+      <button type="submit">Join (receive-only)</button>
     </form>
   )
 }

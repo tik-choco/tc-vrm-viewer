@@ -1,50 +1,62 @@
 # TC VRM Viewer
 
-ブラウザで動作するVRMアバターモデルビューアです。preact + TypeScript + vite + three.js /
-@pixiv/three-vrm で実装されており、tc-storage と相互運用できます。
+A browser-based VRM avatar model viewer built with preact + TypeScript + vite +
+three.js / @pixiv/three-vrm, designed to interoperate with tc-storage.
 
-## 機能
+## Features
 
-- `.vrm` ファイルのドラッグ&ドロップ / ファイル選択で読み込み、オービットカメラ・ライト・グリッドで表示。
-- VRM メタ情報（名前・作者・ライセンス）の表示。
-- 表情（ブレンドシェイプ）スライダーと自動まばたき。
-- tc-storage の FolderBundle / FileBundle JSON からVRMファイルを取り込み。
-- IndexedDB を使ったローカルモデルライブラリ。
-- tc-storage の共有ルームに参加し、VRMファイルを受信専用で受け取るP2P機能（mistlib）。
+- Load `.vrm` files via drag & drop or file picker, rendered with an orbit
+  camera, lighting, and a ground grid.
+- Display VRM metadata (name, authors, license).
+- Expression (blend shape) sliders and idle auto-blink.
+- Import VRM files from tc-storage FolderBundle / FileBundle JSON.
+- Local model library backed by IndexedDB.
+- P2P feature (mistlib) to join a tc-storage share room and receive VRM files
+  in receive-only mode.
 
-## セットアップ
+## Setup
 
 ```bash
 npm install
 npm run dev
 ```
 
-## mistlib-wasm のビルド（任意）
+## Building mistlib-wasm (optional)
 
-P2P受信機能を使うには mistlib-wasm をビルドしてベンダリングする必要があります。
-mistlib はプライベートリポジトリのため、URLは `.env`（gitignore対象）でのみ管理します。
+To use the P2P receive feature, mistlib-wasm must be built and vendored.
+mistlib is a private repository, so its URL is managed only via `.env`
+(gitignored).
 
 ```bash
 cp .env.example .env
-# .env の MISTLIB_REPO / MISTLIB_REF を設定
+# set MISTLIB_REPO / MISTLIB_REF in .env
 npm run build:mistlib
 ```
 
-未ビルドの場合でもアプリの他の機能（ローカルVRM読み込み・bundle取り込み・ライブラリ）は動作し、
-P2Pパネルにはセットアップ手順が表示されます。
+Even without this build, the rest of the app (local VRM loading, bundle
+import, the model library) still works, and the P2P panel shows setup
+instructions instead.
 
-## テスト / ビルド
+## Test / Build
 
 ```bash
 npm test
 npm run build
 ```
 
-## サードパーティライセンス
+## Third-Party Licenses
 
 - [three.js](https://github.com/mrdoob/three.js) — MIT License
 - [@pixiv/three-vrm](https://github.com/pixiv/three-vrm) — MIT License
 - [preact](https://github.com/preactjs/preact) — MIT License
 - [lucide](https://github.com/lucide-icons/lucide) — ISC License
 
-このリポジトリにはサンプルのVRMモデルは含まれていません。VRMモデルにはそれぞれのライセンス条件があります。
+This repository does not include any sample VRM models. VRM models are each
+subject to their own license terms.
+
+## Deployment
+
+Pushing to `main` triggers the GitHub Pages workflow (`.github/workflows/deploy-pages.yml`),
+which builds the app with `VITE_BASE_PATH=/tc-vrm-viewer/` and publishes `dist/` to Pages.
+Set the repository's Pages source to "GitHub Actions". The committed mistlib-wasm artifacts
+are used as-is, so CI needs no access to the private mistlib repository.

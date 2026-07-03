@@ -11,7 +11,7 @@ type ModelLibraryProps = {
 
 export function ModelLibrary({ models, selectedId, onSelect, onRemove }: ModelLibraryProps): JSX.Element {
   if (models.length === 0) {
-    return <p class="model-library__empty">まだモデルがありません</p>
+    return <p class="model-library__empty">No models yet</p>
   }
   return (
     <ul class="model-library">
@@ -21,7 +21,7 @@ export function ModelLibrary({ models, selectedId, onSelect, onRemove }: ModelLi
             <span class="model-library__name">{model.name}</span>
             <span class="model-library__size">{formatBytes(model.size)}</span>
           </button>
-          <button type="button" class="model-library__remove" aria-label="削除" onClick={() => onRemove(model)}>
+          <button type="button" class="model-library__remove" aria-label="Remove" onClick={() => onRemove(model)}>
             ×
           </button>
         </li>
