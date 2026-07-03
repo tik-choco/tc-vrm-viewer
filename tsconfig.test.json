@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "module": "esnext",
+    "lib": ["ES2023", "DOM"],
+    "types": ["node", "vite/client"],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "outDir": "dist-test",
+    "rootDir": ".",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src/storage/domain.ts", "src/storage/bundleImport.ts", "tests/**/*.test.ts"]
+}
