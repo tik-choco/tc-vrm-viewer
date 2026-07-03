@@ -228,3 +228,93 @@ body {
   color: #fff;
   cursor: pointer;
 }
+
+.room-panel__sender {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.room-panel__sender-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.profile-panel__note {
+  color: #8a8f98;
+  font-size: 0.75rem;
+}
+
+.profile-panel__avatar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.profile-panel__avatar-image,
+.profile-panel__avatar-placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #1b1e23;
+  border: 1px solid #23262b;
+}
+
+.profile-panel__avatar-picker {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.profile-panel__avatar-picker input {
+  display: none;
+}
+
+.profile-panel__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.profile-panel__field input[type='text'] {
+  padding: 0.4rem;
+  background: #1b1e23;
+  border: 1px solid #23262b;
+  border-radius: 6px;
+  color: inherit;
+}
+
+.profile-panel__did {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #8a8f98;
+}
+
+.profile-panel__did-value {
+  font-family: monospace;
+}
+
+.profile-panel__did button,
+.profile-panel button[type='submit'] {
+  padding: 0.35rem 0.6rem;
+  background: #0f766e;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.75rem;
+}

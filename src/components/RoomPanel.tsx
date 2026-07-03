@@ -1,16 +1,22 @@
 import { useState } from 'preact/hooks'
 import type { JSX } from 'preact'
 
+type LastSenderProfile = {
+  name: string
+  avatarDataUrl?: string
+}
+
 type RoomPanelProps = {
   mistAvailable: boolean
   roomId: string
   connected: boolean
   peers: string[]
+  lastSenderProfile?: LastSenderProfile
   onJoin: (roomId: string) => void
   onLeave: () => void
 }
 
-export function RoomPanel({ mistAvailable, roomId, connected, peers, onJoin, onLeave }: RoomPanelProps): JSX.Element {
+export function RoomPanel({ mistAvailable, roomId, connected, peers, lastSenderProfile, onJoin, onLeave }: RoomPanelProps): JSX.Element {
   const [draftRoomId, setDraftRoomId] = useState(roomId)
 
   if (!mistAvailable) {
@@ -31,6 +37,12 @@ export function RoomPanel({ mistAvailable, roomId, connected, peers, onJoin, onL
           Connected to room <strong>{roomId}</strong> (receive-only)
         </p>
         <p class="room-panel__peers">Connected peers: {peers.length}</p>
+        {lastSenderProfile && (
+          <p class="room-panel__sender">
+            {lastSenderProfile.avatarDataUrl && <img src={lastSenderProfile.avatarDataUrl} alt="" class="room-panel__sender-avatar" />}
+            Last seen sender: <strong>{lastSenderProfile.name}</strong>
+          </p>
+        )}
         <button type="button" onClick={onLeave}>
           Leave
         </button>

@@ -17,5 +17,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/storage/domain.ts", "src/storage/bundleImport.ts", "tests/**/*.test.ts"]
+  "include": ["src/storage/domain.ts", "src/storage/bundleImport.ts", "src/profile/sharedProfile.ts", "tests/**/*.test.ts"]
 }

@@ -6,16 +6,20 @@ import { ModelLibrary } from './components/ModelLibrary.js'
 import { ExpressionPanel } from './components/ExpressionPanel.js'
 import { MetaPanel } from './components/MetaPanel.js'
 import { RoomPanel } from './components/RoomPanel.js'
+import { ProfilePanel } from './components/ProfilePanel.js'
 import { createViewerScene, startRenderLoop, type ViewerScene } from './viewer/scene.js'
 import { loadVrmFromBytes, replaceVrmInScene, vrmMetaSummary, type VrmMeta } from './viewer/vrmLoader.js'
 import { createAutoBlink, getExpressionWeight, listExpressionNames, setExpressionWeight } from './viewer/expressions.js'
 import { parseBundleJson, bytesToDataUrl } from './storage/bundleImport.js'
 import { addModelToLibrary, checksumOf, listLibraryModels, removeModelFromLibrary } from './storage/library.js'
 import type { FileRecord } from './storage/domain.js'
-import { createNodeId, joinRoomReceiveOnly, leaveRoom, loadMistModule } from './p2p/p2pMist.js'
-import type { MistModule } from './p2p/p2pTypes.js'
+import { getOrCreateNodeId, joinRoomReceiveOnly, leaveRoom, loadMistModule } from './p2p/p2pMist.js'
+import type { MistModule, ShareProfile } from './p2p/p2pTypes.js'
+import { ensureSharedDidIdentity } from './profile/didIdentity.js'
+import { getSharedStorageBackend, type SharedStorageBackend } from './profile/sharedStorage.js'
+import { getEffectiveProfile, loadSharedProfile, saveSharedProfile, type SharedProfile } from './profile/sharedProfile.js'
 
-type Tab = 'meta' | 'expressions' | 'p2p'
+type Tab = 'meta' | 'expressions' | 'p2p' | 'profile'
 
 export function App(): JSX.Element {
   const canvasHostRef = useRef<HTMLDivElement | null>(null)
@@ -37,6 +41,13 @@ export function App(): JSX.Element {
   const [roomId, setRoomId] = useState('')
   const [connected, setConnected] = useState(false)
   const [peers] = useState<string[]>([])
+  const [lastSenderProfile, setLastSenderProfile] = useState<ShareProfile | undefined>(undefined)
+
+  const [did, setDid] = useState<string | undefined>(undefined)
+  const [sharedProfile, setSharedProfile] = useState<SharedProfile | undefined>(undefined)
+  const [sharedBackend, setSharedBackend] = useState<SharedStorageBackend | undefined>(undefined)
+  /** Stable node id, resolved once and reused for both mistlib storage init and room joins (mistlib's runtime is a singleton). */
+  const [nodeId] = useState(() => getOrCreateNodeId())
 
   useEffect(() => {
     if (!canvasHostRef.current) return
@@ -60,6 +71,18 @@ export function App(): JSX.Element {
     loadMistModule().then((mist) => {
       mistRef.current = mist
       setMistAvailable(Boolean(mist))
+    })
+  }, [])
+
+  useEffect(() => {
+    getSharedStorageBackend(nodeId).then((backend) => {
+      setSharedBackend(backend)
+      ensureSharedDidIdentity({ backend })
+        .then((identity) => setDid(identity.did))
+        .catch(() => setError('Failed to load the shared identity'))
+      loadSharedProfile(backend)
+        .then(setSharedProfile)
+        .catch(() => setError('Failed to load the shared profile'))
     })
   }, [])
 
@@ -137,8 +160,8 @@ export function App(): JSX.Element {
   const handleJoinRoom = (nextRoomId: string) => {
     const mist = mistRef.current
     if (!mist) return
-    const nodeId = createNodeId()
     joinRoomReceiveOnly(mist, nodeId, nextRoomId, (envelope) => {
+      if (envelope.senderProfile) setLastSenderProfile(envelope.senderProfile)
       const file = envelope.type === 'file-share' ? envelope.file : undefined
       if (!file?.dataUrl) return
       addModelToLibrary({ name: file.name, mimeType: file.mimeType, size: file.size, dataUrl: file.dataUrl, checksum: file.checksum })
@@ -153,7 +176,30 @@ export function App(): JSX.Element {
     const mist = mistRef.current
     if (mist) leaveRoom(mist)
     setConnected(false)
+    setLastSenderProfile(undefined)
   }
+
+  const handleSaveProfile = async (input: { name: string; avatarBlob?: File }) => {
+    try {
+      const profile = await saveSharedProfile({ name: input.name, did: did ?? '', avatarBlob: input.avatarBlob }, sharedBackend)
+      setSharedProfile(profile)
+      setError(undefined)
+    } catch {
+      setError('Failed to save the profile')
+    }
+  }
+
+  const effectiveProfile = getEffectiveProfile(sharedProfile, { name: 'Local user' })
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined)
+  useEffect(() => {
+    if (!effectiveProfile.avatar) {
+      setAvatarUrl(undefined)
+      return
+    }
+    const url = URL.createObjectURL(effectiveProfile.avatar)
+    setAvatarUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [effectiveProfile.avatar])
 
   return (
     <div class="app-shell">
@@ -175,6 +221,9 @@ export function App(): JSX.Element {
           <button type="button" class={tab === 'p2p' ? 'active' : ''} onClick={() => setTab('p2p')}>
             P2P
           </button>
+          <button type="button" class={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>
+            Profile
+          </button>
         </nav>
         <div class="side-panel__content">
           {tab === 'meta' && <MetaPanel meta={meta} />}
@@ -188,7 +237,18 @@ export function App(): JSX.Element {
             />
           )}
           {tab === 'p2p' && (
-            <RoomPanel mistAvailable={mistAvailable} roomId={roomId} connected={connected} peers={peers} onJoin={handleJoinRoom} onLeave={handleLeaveRoom} />
+            <RoomPanel
+              mistAvailable={mistAvailable}
+              roomId={roomId}
+              connected={connected}
+              peers={peers}
+              lastSenderProfile={lastSenderProfile}
+              onJoin={handleJoinRoom}
+              onLeave={handleLeaveRoom}
+            />
+          )}
+          {tab === 'profile' && (
+            <ProfilePanel storageAvailable={Boolean(sharedBackend)} name={effectiveProfile.name} did={did} avatarUrl={avatarUrl} onSave={handleSaveProfile} />
           )}
         </div>
       </aside>

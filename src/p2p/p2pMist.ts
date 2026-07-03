@@ -25,8 +25,45 @@ export async function loadMistModule(): Promise<MistModule | undefined> {
   }
 }
 
-export function createNodeId(): string {
-  return makeId('node')
+const nodeIdStorageKey = 'tc-vrm-viewer-node-id-v1'
+
+/**
+ * Resolves this browser's stable mistlib node id, persisted in localStorage
+ * (mirrors tc-storage's tc-storage-node-id-v1 pattern). The same id must be
+ * reused everywhere mistlib is initialized in this app — the wasm runtime
+ * is a singleton, so re-initializing with a different id clobbers the
+ * previous one (see ensureMistRuntime below).
+ */
+export function getOrCreateNodeId(): string {
+  const storage = safeLocalStorage()
+  const stored = storage?.getItem(nodeIdStorageKey)?.trim()
+  if (stored) return stored
+  const nodeId = makeId('node')
+  storage?.setItem(nodeIdStorageKey, nodeId)
+  return nodeId
+}
+
+let mistRuntimeInitKey = ''
+
+/**
+ * Initializes the mistlib runtime with the given node id, once. mistlib is
+ * a singleton wasm runtime: calling init_with_config a second time with a
+ * different id would clobber the first initialization, so every caller
+ * (room join, shared storage) must funnel through this guard with the same
+ * node id (mirrors tc-storage's mistStorage.ts initKey guard).
+ */
+export function ensureMistRuntime(mist: Pick<MistModule, 'init_with_config'>, nodeId: string): void {
+  if (mistRuntimeInitKey === nodeId) return
+  mist.init_with_config(nodeId, JSON.stringify({ signaling: { mode: 'nostr', nostr: { relays: [] } } }))
+  mistRuntimeInitKey = nodeId
+}
+
+function safeLocalStorage(): Pick<Storage, 'getItem' | 'setItem'> | undefined {
+  try {
+    return globalThis.localStorage
+  } catch {
+    return undefined
+  }
 }
 
 /**
@@ -34,7 +71,7 @@ export function createNodeId(): string {
  * envelope signing/broadcast, just registering an event callback and joining.
  */
 export function joinRoomReceiveOnly(mist: MistModule, nodeId: string, roomId: string, onEnvelope: (envelope: ShareEnvelope) => void): void {
-  mist.init_with_config(nodeId, JSON.stringify({ signaling: { mode: 'nostr', nostr: { relays: [] } } }))
+  ensureMistRuntime(mist, nodeId)
   mist.register_event_callback((...events: unknown[]) => {
     for (const event of events) {
       const envelope = parseEnvelopeDeep(event)
