@@ -66,6 +66,22 @@ function safeLocalStorage(): Pick<Storage, 'getItem' | 'setItem'> | undefined {
   }
 }
 
+const sendEncoder = new TextEncoder()
+
+/**
+ * Sends a signed envelope directly to a peer's node id (used for the folder
+ * access-grant handshake's folder-access-request, which must be delivered
+ * to the folder owner rather than broadcast to the whole room). Never
+ * throws: mirrors this app's "never crash on P2P I/O" convention.
+ */
+export function sendToPeer(mist: Pick<MistModule, 'send_message'>, targetNodeId: string, envelope: ShareEnvelope): void {
+  try {
+    mist.send_message(targetNodeId, sendEncoder.encode(JSON.stringify(envelope)), 0)
+  } catch {
+    // Ignore delivery failures; the caller shows a "waiting for approval" state and can retry.
+  }
+}
+
 /**
  * Joins a tc-storage share room in receive-only mode: no storage writes, no
  * envelope signing/broadcast, just registering an event callback and joining.

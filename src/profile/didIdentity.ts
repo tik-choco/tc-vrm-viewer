@@ -73,6 +73,18 @@ export async function ensureSharedDidIdentity(
   return identity
 }
 
+/**
+ * Synchronously reads the full DidIdentity (including the private key) from
+ * this app's localStorage mirror, which ensureSharedDidIdentity always
+ * writes after resolving the identity. Used for envelope signing, where the
+ * async mistlib-storage/DID resolution has already happened once (e.g. on
+ * app mount) and callers just need the private key that's already cached.
+ * Returns undefined if the mirror hasn't been populated yet.
+ */
+export function getStoredDidIdentity(storage: JsonStorage = safeLocalStorage() ?? { getItem: () => null, setItem: () => undefined }): DidIdentity | undefined {
+  return parseStoredDidIdentity(storage.getItem(localMirrorKey))
+}
+
 export function parseStoredDidIdentity(raw: string | null | undefined): DidIdentity | undefined {
   try {
     const parsed = JSON.parse(raw ?? '') as Partial<DidIdentity>

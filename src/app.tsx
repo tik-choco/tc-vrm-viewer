@@ -7,10 +7,11 @@ import { ExpressionPanel } from './components/ExpressionPanel.js'
 import { MetaPanel } from './components/MetaPanel.js'
 import { RoomPanel } from './components/RoomPanel.js'
 import { ProfilePanel } from './components/ProfilePanel.js'
+import { TcStorageImportPanel } from './components/TcStorageImportPanel.js'
 import { createViewerScene, startRenderLoop, type ViewerScene } from './viewer/scene.js'
 import { loadVrmFromBytes, replaceVrmInScene, vrmMetaSummary, type VrmMeta } from './viewer/vrmLoader.js'
 import { createAutoBlink, getExpressionWeight, listExpressionNames, setExpressionWeight } from './viewer/expressions.js'
-import { parseBundleJson, bytesToDataUrl } from './storage/bundleImport.js'
+import { parseBundleJson, bytesFromDataUrl, bytesToDataUrl } from './storage/bundleImport.js'
 import { addModelToLibrary, checksumOf, listLibraryModels, removeModelFromLibrary } from './storage/library.js'
 import type { FileRecord } from './storage/domain.js'
 import { getOrCreateNodeId, joinRoomReceiveOnly, leaveRoom, loadMistModule } from './p2p/p2pMist.js'
@@ -19,7 +20,7 @@ import { ensureSharedDidIdentity } from './profile/didIdentity.js'
 import { getSharedStorageBackend, type SharedStorageBackend } from './profile/sharedStorage.js'
 import { getEffectiveProfile, loadSharedProfile, saveSharedProfile, type SharedProfile } from './profile/sharedProfile.js'
 
-type Tab = 'meta' | 'expressions' | 'p2p' | 'profile'
+type Tab = 'meta' | 'expressions' | 'p2p' | 'profile' | 'import'
 
 export function App(): JSX.Element {
   const canvasHostRef = useRef<HTMLDivElement | null>(null)
@@ -140,6 +141,16 @@ export function App(): JSX.Element {
     await showVrmBytes(bytes)
   }
 
+  const handleImportTcStorageFile = async (file: FileRecord) => {
+    if (!file.dataUrl) throw new Error(`${file.name} has no content to import`)
+    const bytes = bytesFromDataUrl(file.dataUrl)
+    const checksum = file.checksum || (await checksumOf(bytes))
+    const record = await addModelToLibrary({ name: file.name, mimeType: file.mimeType || 'model/gltf-binary', size: file.size, dataUrl: file.dataUrl, checksum })
+    setModels((prev) => [record, ...prev])
+    setSelectedId(record.id)
+    await showVrmBytes(bytes)
+  }
+
   const handleRemoveModel = async (model: FileRecord) => {
     await removeModelFromLibrary(model.id)
     setModels((prev) => prev.filter((item) => item.id !== model.id))
@@ -224,6 +235,9 @@ export function App(): JSX.Element {
           <button type="button" class={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>
             Profile
           </button>
+          <button type="button" class={tab === 'import' ? 'active' : ''} onClick={() => setTab('import')}>
+            tc-storage
+          </button>
         </nav>
         <div class="side-panel__content">
           {tab === 'meta' && <MetaPanel meta={meta} />}
@@ -249,6 +263,15 @@ export function App(): JSX.Element {
           )}
           {tab === 'profile' && (
             <ProfilePanel storageAvailable={Boolean(sharedBackend)} name={effectiveProfile.name} did={did} avatarUrl={avatarUrl} onSave={handleSaveProfile} />
+          )}
+          {tab === 'import' && (
+            <TcStorageImportPanel
+              mistAvailable={mistAvailable}
+              mist={mistRef.current}
+              nodeId={nodeId}
+              did={did}
+              onImportFile={handleImportTcStorageFile}
+            />
           )}
         </div>
       </aside>
