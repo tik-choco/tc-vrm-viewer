@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import type { JSX } from 'preact'
+import './TcStorageImportPanel.css'
+import { File as FileIcon, Folder, Link2, Loader } from 'lucide-preact'
 import type { AccessRequestKey } from '../storage/accessGrantCrypto.js'
 import { createAccessRequestKey, decryptFolderKeyGrant } from '../storage/accessGrantCrypto.js'
 import { matchesFolderKeyHash } from '../storage/folderKeyProof.js'
@@ -253,97 +255,176 @@ export function TcStorageImportPanel({ mistAvailable, mist, nodeId, did, onImpor
 
   if (!mistAvailable) {
     return (
-      <div class="tc-storage-panel tc-storage-panel--setup">
-        <p>mistlib-wasm has not been built yet.</p>
-        <p>
-          Set <code>MISTLIB_REPO</code> in <code>.env</code>, then run <code>npm run build:mistlib</code>.
+      <div class="tc-import tc-import--setup card anim-in">
+        <div class="tc-import__setup-head">
+          <span class="tc-import__setup-icon" aria-hidden="true">
+            <Link2 size={16} />
+          </span>
+          <span class="card__title">Share import unavailable</span>
+        </div>
+        <p class="tc-import__setup-text">
+          mistlib-wasm has not been built yet. Set <code class="tc-import__code">MISTLIB_REPO</code> in{' '}
+          <code class="tc-import__code">.env</code>, then run <code class="tc-import__code">npm run build:mistlib</code>.
         </p>
       </div>
     )
   }
 
   return (
-    <div class="tc-storage-panel">
+    <div class="tc-import">
       <form
-        class="tc-storage-panel__input"
+        class="tc-import__form"
         onSubmit={(event: JSX.TargetedEvent<HTMLFormElement>) => {
           event.preventDefault()
           handleParse()
         }}
       >
-        <label>
-          tc-storage share link
+        <div class="field">
+          <label class="field__label" for="tc-import-link">
+            tc-storage share link
+          </label>
           <input
+            id="tc-import-link"
+            class="input"
             type="text"
             value={linkInput}
             onInput={(event) => setLinkInput(event.currentTarget.value)}
             placeholder="Paste a tc-storage share URL or #tc-share=... fragment"
           />
-        </label>
-        <button type="submit">Import</button>
+        </div>
+        <button type="submit" class="btn btn--primary btn--block">
+          Import
+        </button>
       </form>
 
-      {phase === 'idle' && <p class="panel-empty">Paste a share link from tc-storage to load a VRM file.</p>}
+      {phase === 'idle' && (
+        <div class="empty-state">
+          <span class="empty-state__icon" aria-hidden="true">
+            <Link2 size={20} />
+          </span>
+          <p class="empty-state__text">Paste a share link from tc-storage to load a VRM file.</p>
+        </div>
+      )}
 
-      {phase === 'error' && message && <p class="tc-storage-panel__error">{message}</p>}
+      {phase === 'error' && message && (
+        <p class="banner banner--error" role="alert">
+          {message}
+        </p>
+      )}
 
       {share?.type === 'file-share' && (phase === 'parsed' || (phase === 'error' && importedFileId === undefined)) && (
-        <div class="tc-storage-panel__card">
-          <p class="tc-storage-panel__card-title">File share</p>
-          <p>{share.fileName ?? 'Untitled file'}</p>
-          {message && phase !== 'error' && <p class="tc-storage-panel__note">{message}</p>}
-          <button type="button" disabled={Boolean(busyFileId)} onClick={() => void importFileShare()}>
+        <div class="card tc-import__card anim-in">
+          <div class="tc-import__card-head">
+            <span class="tc-import__badge" aria-hidden="true">
+              <FileIcon size={18} />
+            </span>
+            <div class="tc-import__card-headings">
+              <span class="section-heading">File share</span>
+              <span class="tc-import__card-title truncate" title={share.fileName ?? 'Untitled file'}>
+                {share.fileName ?? 'Untitled file'}
+              </span>
+            </div>
+          </div>
+          {message && phase !== 'error' && <p class="banner banner--info">{message}</p>}
+          <button
+            type="button"
+            class="btn btn--primary btn--block"
+            disabled={Boolean(busyFileId)}
+            onClick={() => void importFileShare()}
+          >
             {busyFileId ? 'Importing...' : 'Import'}
           </button>
         </div>
       )}
 
       {share?.type === 'folder-share' && phase === 'parsed' && (
-        <div class="tc-storage-panel__card">
-          <p class="tc-storage-panel__card-title">Folder share</p>
-          <p>{share.folderName ?? 'Untitled folder'}</p>
-          <button type="button" onClick={() => void requestFolderAccess()}>
+        <div class="card tc-import__card anim-in">
+          <div class="tc-import__card-head">
+            <span class="tc-import__badge" aria-hidden="true">
+              <Folder size={18} />
+            </span>
+            <div class="tc-import__card-headings">
+              <span class="section-heading">Folder share</span>
+              <span class="tc-import__card-title truncate" title={share.folderName ?? 'Untitled folder'}>
+                {share.folderName ?? 'Untitled folder'}
+              </span>
+            </div>
+          </div>
+          <button type="button" class="btn btn--primary btn--block" onClick={() => void requestFolderAccess()}>
             Request access
           </button>
         </div>
       )}
 
       {phase === 'requesting' && (
-        <div class="tc-storage-panel__card">
-          <p class="tc-storage-panel__spinner">Waiting for approval...</p>
+        <div class="card tc-import__card anim-in">
+          <p class="tc-import__status">
+            <span class="spin" aria-hidden="true">
+              <Loader size={15} />
+            </span>
+            Waiting for approval...
+          </p>
+          <SkeletonRows />
         </div>
       )}
 
       {phase === 'denied' && (
-        <div class="tc-storage-panel__card">
-          <p class="tc-storage-panel__error">{message ?? 'Access denied.'}</p>
-          <button type="button" onClick={() => void requestFolderAccess()}>
+        <div class="card tc-import__card anim-in">
+          <p class="banner banner--error" role="alert">
+            {message ?? 'Access denied.'}
+          </p>
+          <button type="button" class="btn btn--block" onClick={() => void requestFolderAccess()}>
             Retry
           </button>
         </div>
       )}
 
       {phase === 'loading-folder' && (
-        <div class="tc-storage-panel__card">
-          <p class="tc-storage-panel__spinner">Loading folder...</p>
+        <div class="card tc-import__card anim-in">
+          <p class="tc-import__status">
+            <span class="spin" aria-hidden="true">
+              <Loader size={15} />
+            </span>
+            Loading folder...
+          </p>
+          <SkeletonRows />
         </div>
       )}
 
       {phase === 'folder-ready' && folderBundle && (
-        <div class="tc-storage-panel__card">
-          <p class="tc-storage-panel__card-title">{folderBundle.folder.name}</p>
-          {message && <p class="tc-storage-panel__note">{message}</p>}
-          <ul class="tc-storage-panel__files">
+        <div class="card tc-import__card anim-in">
+          <div class="tc-import__card-head">
+            <span class="tc-import__badge" aria-hidden="true">
+              <Folder size={18} />
+            </span>
+            <div class="tc-import__card-headings">
+              <span class="section-heading">
+                Shared folder <span class="section-heading__count">{folderBundle.files.length}</span>
+              </span>
+              <span class="tc-import__card-title truncate" title={folderBundle.folder.name}>
+                {folderBundle.folder.name}
+              </span>
+            </div>
+          </div>
+          {message && <p class="banner banner--info">{message}</p>}
+          <ul class="tc-import__files">
             {folderBundle.files.map((file) => (
-              <li key={file.id} class={isVrmFile(file) ? 'tc-storage-panel__file' : 'tc-storage-panel__file tc-storage-panel__file--dim'}>
-                <div class="tc-storage-panel__file-info">
-                  <span class="tc-storage-panel__file-name">{file.name}</span>
-                  <span class="tc-storage-panel__file-meta">
+              <li key={file.id} class={isVrmFile(file) ? 'tc-import__file' : 'tc-import__file tc-import__file--dim'}>
+                <div class="tc-import__file-info">
+                  <span class="tc-import__file-name truncate" title={file.name}>
+                    {file.name}
+                  </span>
+                  <span class="tc-import__file-meta">
                     {formatBytes(file.size)}
                     {!isVrmFile(file) && ' · not a VRM'}
                   </span>
                 </div>
-                <button type="button" disabled={busyFileId === file.id} onClick={() => void loadFolderFile(file)}>
+                <button
+                  type="button"
+                  class="btn btn--sm tc-import__file-action"
+                  disabled={busyFileId === file.id}
+                  onClick={() => void loadFolderFile(file)}
+                >
                   {busyFileId === file.id ? 'Loading...' : importedFileId === file.id ? 'Imported' : 'Load'}
                 </button>
               </li>
@@ -351,6 +432,16 @@ export function TcStorageImportPanel({ mistAvailable, mist, nodeId, did, onImpor
           </ul>
         </div>
       )}
+    </div>
+  )
+}
+
+function SkeletonRows(): JSX.Element {
+  return (
+    <div class="tc-import__skeletons" aria-hidden="true">
+      <span class="skeleton tc-import__skeleton-row" />
+      <span class="skeleton tc-import__skeleton-row tc-import__skeleton-row--short" />
+      <span class="skeleton tc-import__skeleton-row tc-import__skeleton-row--shorter" />
     </div>
   )
 }

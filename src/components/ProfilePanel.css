@@ -1,0 +1,110 @@
+/* ============================================================
+   ProfilePanel — identity card layout.
+   Builds only on tokens + primitives from src/styles.css.
+   ============================================================ */
+
+.profile-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* --- Identity row: avatar + picker --------------------------- */
+
+.profile-panel__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+}
+
+.profile-panel__avatar {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+
+.profile-panel__avatar-image,
+.profile-panel__avatar-fallback {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+.profile-panel__avatar-image {
+  object-fit: cover;
+  background: var(--surface-3);
+}
+
+.profile-panel__avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-color: var(--primary-border);
+}
+
+.profile-panel__identity-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.profile-panel__identity-hint {
+  font-size: 0.72rem;
+  color: var(--text-subtle);
+}
+
+/* File picker: label styled as a button, native input hidden. */
+.profile-panel__picker {
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.profile-panel__picker input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- DID row -------------------------------------------------- */
+
+.profile-panel__did {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.4rem 0.4rem 0.4rem 0.7rem;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.profile-panel__did-value {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.profile-panel__did-copy {
+  flex-shrink: 0;
+}
+
+.profile-panel__did-copy.is-copied {
+  color: var(--primary);
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+}

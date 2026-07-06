@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import type { JSX } from 'preact'
+import { Box, FolderDown, Info, Moon, MousePointerClick, Smile, Sun, User, Wifi } from 'lucide-preact'
 import type { VRM } from '@pixiv/three-vrm'
 import { DropZone } from './components/DropZone.js'
 import { ModelLibrary } from './components/ModelLibrary.js'
@@ -21,6 +22,14 @@ import { getSharedStorageBackend, type SharedStorageBackend } from './profile/sh
 import { getEffectiveProfile, loadSharedProfile, saveSharedProfile, type SharedProfile } from './profile/sharedProfile.js'
 
 type Tab = 'meta' | 'expressions' | 'p2p' | 'profile' | 'import'
+
+const TABS: { id: Tab; label: string; icon: typeof Info }[] = [
+  { id: 'meta', label: 'Meta', icon: Info },
+  { id: 'expressions', label: 'Face', icon: Smile },
+  { id: 'p2p', label: 'P2P', icon: Wifi },
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'import', label: 'Storage', icon: FolderDown },
+]
 
 export function App(): JSX.Element {
   const canvasHostRef = useRef<HTMLDivElement | null>(null)
@@ -50,10 +59,25 @@ export function App(): JSX.Element {
   /** Stable node id, resolved once and reused for both mistlib storage init and room joins (mistlib's runtime is a singleton). */
   const [nodeId] = useState(() => getOrCreateNodeId())
 
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+  )
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    viewerRef.current?.applyTheme(theme)
+    try {
+      localStorage.setItem('tcvrm-theme', theme)
+    } catch {
+      /* storage may be unavailable (private mode); the in-memory theme still applies */
+    }
+  }, [theme])
+
   useEffect(() => {
     if (!canvasHostRef.current) return
     const viewer = createViewerScene(canvasHostRef.current)
     viewerRef.current = viewer
+    viewer.applyTheme(theme)
     const stop = startRenderLoop(viewer, (delta) => {
       currentVrmRef.current?.update(delta)
       autoBlinkStepRef.current?.(delta)
@@ -214,32 +238,75 @@ export function App(): JSX.Element {
 
   return (
     <div class="app-shell">
-      <aside class="sidebar">
-        <h1 class="sidebar__title">TC VRM Viewer</h1>
-        <DropZone onFiles={handleFiles} />
-        {error && <p class="error-banner">{error}</p>}
-        <ModelLibrary models={models} selectedId={selectedId} onSelect={handleSelectModel} onRemove={handleRemoveModel} />
-      </aside>
-      <main class="viewer-host" ref={canvasHostRef} />
+      <header class="app-bar">
+        <div class="app-bar__brand">
+          <span class="app-bar__logo" aria-hidden="true">
+            <Box size={18} />
+          </span>
+          <div>
+            <div class="app-bar__title">TC VRM Viewer</div>
+            <div class="app-bar__subtitle">Private, in-browser VRM avatar viewer</div>
+          </div>
+        </div>
+        <div class="app-bar__spacer" />
+        <div class="app-bar__actions">
+          <button
+            type="button"
+            class="icon-button"
+            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <a
+            class="icon-button"
+            href="https://github.com/tik-choco/tc-vrm-viewer"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="View source on GitHub"
+            title="View source on GitHub"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.06-.02-2.08-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.31.47-2.39 1.24-3.23-.12-.3-.54-1.53.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.77.84 1.24 1.92 1.24 3.23 0 4.62-2.81 5.64-5.49 5.94.43.37.81 1.1.81 2.22 0 1.6-.01 2.9-.01 3.29 0 .32.22.7.83.58C20.56 22.29 24 17.8 24 12.5 24 5.87 18.63.5 12 .5Z" />
+            </svg>
+          </a>
+        </div>
+      </header>
+      <div class="app-body">
+        <aside class="sidebar">
+          <DropZone onFiles={handleFiles} />
+          {error && (
+            <p class="banner banner--error" role="alert">
+              {error}
+            </p>
+          )}
+          <ModelLibrary models={models} selectedId={selectedId} onSelect={handleSelectModel} onRemove={handleRemoveModel} />
+        </aside>
+        <main class="viewer-host" ref={canvasHostRef}>
+          {!meta && (
+            <div class="viewer-hint">
+              <MousePointerClick size={15} />
+              <span>Drop a .vrm file or pick one from your library to begin</span>
+            </div>
+          )}
+        </main>
       <aside class="side-panel">
-        <nav class="side-panel__tabs">
-          <button type="button" class={tab === 'meta' ? 'active' : ''} onClick={() => setTab('meta')}>
-            Meta
-          </button>
-          <button type="button" class={tab === 'expressions' ? 'active' : ''} onClick={() => setTab('expressions')}>
-            Expressions
-          </button>
-          <button type="button" class={tab === 'p2p' ? 'active' : ''} onClick={() => setTab('p2p')}>
-            P2P
-          </button>
-          <button type="button" class={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>
-            Profile
-          </button>
-          <button type="button" class={tab === 'import' ? 'active' : ''} onClick={() => setTab('import')}>
-            tc-storage
-          </button>
+        <nav class="side-panel__tabs" role="tablist" aria-label="Panels">
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+            >
+              <Icon size={14} />
+              <span>{label}</span>
+            </button>
+          ))}
         </nav>
-        <div class="side-panel__content">
+        <div class="side-panel__content anim-in" key={tab}>
           {tab === 'meta' && <MetaPanel meta={meta} />}
           {tab === 'expressions' && (
             <ExpressionPanel
@@ -275,6 +342,7 @@ export function App(): JSX.Element {
           )}
         </div>
       </aside>
+      </div>
     </div>
   )
 }
