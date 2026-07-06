@@ -1,0 +1,46 @@
+/* ------------------------------------------------------------
+   MetaPanel — model metadata as label / value rows
+------------------------------------------------------------ */
+
+.meta-panel {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.meta-panel__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+}
+
+.meta-panel__row + .meta-panel__row {
+  border-top: 1px solid var(--border);
+}
+
+.meta-panel__label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.meta-panel__value {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.meta-panel__value a {
+  color: var(--primary);
+  font-weight: 550;
+}

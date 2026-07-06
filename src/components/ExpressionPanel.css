@@ -1,0 +1,66 @@
+/* ------------------------------------------------------------
+   ExpressionPanel — auto-blink toggle + expression sliders
+------------------------------------------------------------ */
+
+.expression-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Auto-blink toggle row (label wraps text + .switch) */
+.expression-panel__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-1);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.expression-panel__toggle:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.expression-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.expression-panel__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+
+.expression-panel__row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.expression-panel__label {
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.expression-panel__value {
+  flex-shrink: 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}

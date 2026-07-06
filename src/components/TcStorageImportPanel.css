@@ -1,0 +1,178 @@
+/* ============================================================
+   TcStorageImportPanel — share-link import flow layout.
+   Builds only on tokens + primitives from src/styles.css.
+   ============================================================ */
+
+.tc-import {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tc-import__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* --- Setup / unavailable (calm info card) -------------------- */
+
+.tc-import__setup-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text);
+}
+
+.tc-import__setup-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.tc-import__setup-text {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.tc-import__code {
+  padding: 0.05em 0.4em;
+  border-radius: var(--radius-xs);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Consolas, monospace;
+  font-size: 0.78em;
+}
+
+/* --- Phase cards --------------------------------------------- */
+
+.tc-import__card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.tc-import__badge {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-s);
+  background: var(--primary-soft);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.tc-import__card-headings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.tc-import__card-title {
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--text);
+  min-width: 0;
+}
+
+/* --- Spinner / status line ----------------------------------- */
+
+.tc-import__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.tc-import__status .spin {
+  display: inline-flex;
+  color: var(--primary);
+}
+
+/* --- Skeleton loading rows ----------------------------------- */
+
+.tc-import__skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tc-import__skeleton-row {
+  display: block;
+  height: 12px;
+  width: 100%;
+}
+
+.tc-import__skeleton-row--short {
+  width: 70%;
+}
+
+.tc-import__skeleton-row--shorter {
+  width: 45%;
+}
+
+/* --- Folder file list ---------------------------------------- */
+
+.tc-import__files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tc-import__file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.tc-import__file:hover {
+  border-color: var(--border-strong);
+}
+
+.tc-import__file--dim {
+  opacity: 0.6;
+}
+
+.tc-import__file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.tc-import__file-name {
+  font-size: 0.82rem;
+  font-weight: 550;
+  color: var(--text);
+  min-width: 0;
+}
+
+.tc-import__file-meta {
+  font-size: 0.72rem;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.tc-import__file-action {
+  flex-shrink: 0;
+}

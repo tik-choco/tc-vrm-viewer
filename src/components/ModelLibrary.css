@@ -1,0 +1,102 @@
+/* ------------------------------------------------------------
+   ModelLibrary — saved models list with select + remove
+------------------------------------------------------------ */
+
+.model-library {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.model-library__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.model-library__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  padding-right: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-1);
+  transition:
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.model-library__item:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.model-library__item--selected,
+.model-library__item--selected:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
+}
+
+/* Full-width select target: name over size */
+.model-library__select {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  text-align: left;
+  color: inherit;
+}
+
+.model-library__name {
+  max-width: 100%;
+  font-size: 0.82rem;
+  font-weight: 550;
+  color: var(--text);
+}
+
+.model-library__item--selected .model-library__name {
+  color: var(--primary);
+}
+
+.model-library__size {
+  font-size: 0.7rem;
+  color: var(--text-subtle);
+}
+
+/* Remove button (built on .btn--icon): hidden until row hover/focus,
+   turns danger-coloured on its own hover. */
+.model-library__remove {
+  flex-shrink: 0;
+  opacity: 0;
+  transition:
+    opacity var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.model-library__item:hover .model-library__remove,
+.model-library__item:focus-within .model-library__remove {
+  opacity: 1;
+}
+
+.model-library__item .model-library__remove:not(:disabled):hover {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+/* Keep the remove button reachable & visible for keyboard users */
+.model-library__remove:focus-visible {
+  opacity: 1;
+}
