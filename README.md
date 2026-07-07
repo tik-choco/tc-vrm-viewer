@@ -1,4 +1,4 @@
-# TC VRM Viewer
+# TC Avatar
 
 A fast, **private, browser-based viewer for VRM avatar models**. Load a `.vrm`
 file, inspect its metadata, tweak facial expressions in real time, and import
