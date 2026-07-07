@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@pixiv/three-vrm": "^3.4.2",
+    "@pixiv/three-vrm-animation": "^3.5.4",
     "lucide-preact": "^1.14.0",
     "preact": "^10.29.1",
     "three": "^0.180.0"

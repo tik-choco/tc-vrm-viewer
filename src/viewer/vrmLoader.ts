@@ -19,6 +19,9 @@ export async function loadVrmFromBytes(bytes: Uint8Array): Promise<VRM> {
   VRMUtils.removeUnnecessaryVertices(gltf.scene)
   VRMUtils.combineSkeletons(gltf.scene)
   VRMUtils.combineMorphs(vrm)
+  // VRM0.x models are authored facing +Z, the opposite of this viewer's camera;
+  // rotateVRM0 flips them 180 degrees to face the camera (a no-op for VRM1.0 models).
+  VRMUtils.rotateVRM0(vrm)
   vrm.scene.traverse((object) => {
     object.frustumCulled = false
   })
@@ -28,14 +31,16 @@ export async function loadVrmFromBytes(bytes: Uint8Array): Promise<VRM> {
 export function vrmMetaSummary(vrm: VRM): VrmMeta {
   const meta = vrm.meta as unknown as {
     name?: string
+    title?: string
     authors?: string[]
+    author?: string
     licenseUrl?: string
     licenseName?: string
     licenseUrl0?: string
   } | undefined
   return {
-    name: meta?.name,
-    authors: meta?.authors ?? [],
+    name: meta?.name ?? meta?.title,
+    authors: meta?.authors ?? (meta?.author ? [meta.author] : []),
     licenseUrl: meta?.licenseUrl ?? meta?.licenseUrl0,
     licenseName: meta?.licenseName,
   }

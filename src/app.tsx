@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import type { JSX } from 'preact'
-import { Box, FolderDown, Info, Moon, MousePointerClick, Smile, Sun, User, Wifi } from 'lucide-preact'
+import { Box, Film, FolderDown, Info, Moon, MousePointerClick, Smile, Sun, User, Wifi } from 'lucide-preact'
 import type { VRM } from '@pixiv/three-vrm'
 import { DropZone } from './components/DropZone.js'
 import { ModelLibrary } from './components/ModelLibrary.js'
 import { ExpressionPanel } from './components/ExpressionPanel.js'
+import { AnimationPanel } from './components/AnimationPanel.js'
 import { MetaPanel } from './components/MetaPanel.js'
 import { RoomPanel } from './components/RoomPanel.js'
 import { ProfilePanel } from './components/ProfilePanel.js'
@@ -12,6 +13,7 @@ import { TcStorageImportPanel } from './components/TcStorageImportPanel.js'
 import { createViewerScene, startRenderLoop, type ViewerScene } from './viewer/scene.js'
 import { loadVrmFromBytes, replaceVrmInScene, vrmMetaSummary, type VrmMeta } from './viewer/vrmLoader.js'
 import { createAutoBlink, getExpressionWeight, listExpressionNames, setExpressionWeight } from './viewer/expressions.js'
+import { loadVrmAnimationFromBytes, playVrmAnimation, type VRMAnimation, type VrmAnimationHandle } from './viewer/vrmAnimation.js'
 import { parseBundleJson, bytesFromDataUrl, bytesToDataUrl } from './storage/bundleImport.js'
 import { addModelToLibrary, checksumOf, listLibraryModels, removeModelFromLibrary } from './storage/library.js'
 import type { FileRecord } from './storage/domain.js'
@@ -21,15 +23,35 @@ import { ensureSharedDidIdentity } from './profile/didIdentity.js'
 import { getSharedStorageBackend, type SharedStorageBackend } from './profile/sharedStorage.js'
 import { getEffectiveProfile, loadSharedProfile, saveSharedProfile, type SharedProfile } from './profile/sharedProfile.js'
 
-type Tab = 'meta' | 'expressions' | 'p2p' | 'profile' | 'import'
+type Tab = 'meta' | 'expressions' | 'animation' | 'p2p' | 'profile' | 'import'
 
 const TABS: { id: Tab; label: string; icon: typeof Info }[] = [
   { id: 'meta', label: 'Meta', icon: Info },
   { id: 'expressions', label: 'Face', icon: Smile },
+  { id: 'animation', label: 'Anim', icon: Film },
   { id: 'p2p', label: 'P2P', icon: Wifi },
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'import', label: 'Storage', icon: FolderDown },
 ]
+
+const LAST_MODEL_STORAGE_KEY = 'tcvrm-last-model-id'
+
+function getLastModelId(): string | null {
+  try {
+    return localStorage.getItem(LAST_MODEL_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+function setLastModelId(id: string | undefined): void {
+  try {
+    if (id) localStorage.setItem(LAST_MODEL_STORAGE_KEY, id)
+    else localStorage.removeItem(LAST_MODEL_STORAGE_KEY)
+  } catch {
+    /* storage may be unavailable (private mode); the app still works, just without restoring on next launch */
+  }
+}
 
 export function App(): JSX.Element {
   const canvasHostRef = useRef<HTMLDivElement | null>(null)
@@ -37,6 +59,8 @@ export function App(): JSX.Element {
   const currentVrmRef = useRef<VRM | undefined>(undefined)
   const autoBlinkStepRef = useRef<((delta: number) => void) | null>(null)
   const mistRef = useRef<MistModule | undefined>(undefined)
+  const animationHandleRef = useRef<VrmAnimationHandle | null>(null)
+  const currentAnimationRef = useRef<VRMAnimation | undefined>(undefined)
 
   const [models, setModels] = useState<FileRecord[]>([])
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined)
@@ -44,6 +68,8 @@ export function App(): JSX.Element {
   const [expressionNames, setExpressionNames] = useState<string[]>([])
   const [weights, setWeights] = useState<Record<string, number>>({})
   const [autoBlink, setAutoBlink] = useState(true)
+  const [animationName, setAnimationName] = useState<string | undefined>(undefined)
+  const [animationPlaying, setAnimationPlaying] = useState(false)
   const [tab, setTab] = useState<Tab>('meta')
   const [error, setError] = useState<string | undefined>(undefined)
 
@@ -79,6 +105,7 @@ export function App(): JSX.Element {
     viewerRef.current = viewer
     viewer.applyTheme(theme)
     const stop = startRenderLoop(viewer, (delta) => {
+      animationHandleRef.current?.mixer.update(delta)
       currentVrmRef.current?.update(delta)
       autoBlinkStepRef.current?.(delta)
     })
@@ -89,7 +116,15 @@ export function App(): JSX.Element {
   }, [])
 
   useEffect(() => {
-    listLibraryModels().then(setModels).catch(() => setError('Failed to load the library'))
+    listLibraryModels()
+      .then((loaded) => {
+        setModels(loaded)
+        if (loaded.length === 0) return
+        const lastId = getLastModelId()
+        const restoreTarget = loaded.find((model) => model.id === lastId) ?? loaded[0]
+        handleSelectModel(restoreTarget)
+      })
+      .catch(() => setError('Failed to load the library'))
   }, [])
 
   useEffect(() => {
@@ -111,6 +146,15 @@ export function App(): JSX.Element {
     })
   }, [])
 
+  const applyAnimationToVrm = (vrm: VRM) => {
+    animationHandleRef.current?.mixer.stopAllAction()
+    animationHandleRef.current = null
+    if (!currentAnimationRef.current) return
+    const handle = playVrmAnimation(vrm, currentAnimationRef.current)
+    animationHandleRef.current = handle
+    setAnimationPlaying(true)
+  }
+
   const showVrmBytes = async (bytes: Uint8Array) => {
     try {
       const vrm = await loadVrmFromBytes(bytes)
@@ -122,6 +166,7 @@ export function App(): JSX.Element {
       setExpressionNames(names)
       setWeights(Object.fromEntries(names.map((name) => [name, getExpressionWeight(vrm, name)])))
       autoBlinkStepRef.current = autoBlink ? createAutoBlink(vrm) : null
+      applyAnimationToVrm(vrm)
       setError(undefined)
     } catch {
       setError('Failed to load the VRM file')
@@ -147,6 +192,7 @@ export function App(): JSX.Element {
           const record = await addModelToLibrary({ name: file.name, mimeType: 'model/gltf-binary', size: bytes.byteLength, dataUrl, checksum })
           setModels((prev) => [record, ...prev])
           setSelectedId(record.id)
+          setLastModelId(record.id)
           await showVrmBytes(bytes)
         }
       } catch {
@@ -158,6 +204,7 @@ export function App(): JSX.Element {
   const handleSelectModel = async (model: FileRecord) => {
     if (!model.dataUrl) return
     setSelectedId(model.id)
+    setLastModelId(model.id)
     const commaIndex = model.dataUrl.indexOf(',')
     const binary = atob(model.dataUrl.slice(commaIndex + 1))
     const bytes = new Uint8Array(binary.length)
@@ -172,13 +219,17 @@ export function App(): JSX.Element {
     const record = await addModelToLibrary({ name: file.name, mimeType: file.mimeType || 'model/gltf-binary', size: file.size, dataUrl: file.dataUrl, checksum })
     setModels((prev) => [record, ...prev])
     setSelectedId(record.id)
+    setLastModelId(record.id)
     await showVrmBytes(bytes)
   }
 
   const handleRemoveModel = async (model: FileRecord) => {
     await removeModelFromLibrary(model.id)
     setModels((prev) => prev.filter((item) => item.id !== model.id))
-    if (selectedId === model.id) setSelectedId(undefined)
+    if (selectedId === model.id) {
+      setSelectedId(undefined)
+      setLastModelId(undefined)
+    }
   }
 
   const handleExpressionChange = (name: string, weight: number) => {
@@ -190,6 +241,34 @@ export function App(): JSX.Element {
   const handleToggleAutoBlink = (enabled: boolean) => {
     setAutoBlink(enabled)
     autoBlinkStepRef.current = enabled && currentVrmRef.current ? createAutoBlink(currentVrmRef.current) : null
+  }
+
+  const handleLoadAnimationFile = async (file: File) => {
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      const animation = await loadVrmAnimationFromBytes(bytes)
+      currentAnimationRef.current = animation
+      setAnimationName(file.name)
+      if (currentVrmRef.current) applyAnimationToVrm(currentVrmRef.current)
+      setError(undefined)
+    } catch {
+      setError(`Failed to load animation ${file.name}`)
+    }
+  }
+
+  const handleToggleAnimationPlaying = (playing: boolean) => {
+    const action = animationHandleRef.current?.action
+    if (!action) return
+    action.paused = !playing
+    setAnimationPlaying(playing)
+  }
+
+  const handleClearAnimation = () => {
+    animationHandleRef.current?.mixer.stopAllAction()
+    animationHandleRef.current = null
+    currentAnimationRef.current = undefined
+    setAnimationName(undefined)
+    setAnimationPlaying(false)
   }
 
   const handleJoinRoom = (nextRoomId: string) => {
@@ -244,7 +323,7 @@ export function App(): JSX.Element {
             <Box size={18} />
           </span>
           <div>
-            <div class="app-bar__title">TC VRM Viewer</div>
+            <div class="app-bar__title">TC Avatar</div>
             <div class="app-bar__subtitle">Private, in-browser VRM avatar viewer</div>
           </div>
         </div>
@@ -315,6 +394,16 @@ export function App(): JSX.Element {
               onChange={handleExpressionChange}
               autoBlink={autoBlink}
               onToggleAutoBlink={handleToggleAutoBlink}
+            />
+          )}
+          {tab === 'animation' && (
+            <AnimationPanel
+              animationName={animationName}
+              isPlaying={animationPlaying}
+              hasModel={Boolean(meta)}
+              onLoadFile={handleLoadAnimationFile}
+              onTogglePlaying={handleToggleAnimationPlaying}
+              onClear={handleClearAnimation}
             />
           )}
           {tab === 'p2p' && (
