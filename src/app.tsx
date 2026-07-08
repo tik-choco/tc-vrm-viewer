@@ -14,6 +14,7 @@ import { createViewerScene, startRenderLoop, type ViewerScene } from './viewer/s
 import { loadVrmFromBytes, replaceVrmInScene, vrmMetaSummary, type VrmMeta } from './viewer/vrmLoader.js'
 import { createAutoBlink, getExpressionWeight, listExpressionNames, setExpressionWeight } from './viewer/expressions.js'
 import { loadVrmAnimationFromBytes, playVrmAnimation, type VRMAnimation, type VrmAnimationHandle } from './viewer/vrmAnimation.js'
+import { createIdleMotion } from './viewer/idleMotion.js'
 import { parseBundleJson, bytesFromDataUrl, bytesToDataUrl } from './storage/bundleImport.js'
 import { addModelToLibrary, checksumOf, listLibraryModels, removeModelFromLibrary } from './storage/library.js'
 import type { FileRecord } from './storage/domain.js'
@@ -61,6 +62,7 @@ export function App(): JSX.Element {
   const mistRef = useRef<MistModule | undefined>(undefined)
   const animationHandleRef = useRef<VrmAnimationHandle | null>(null)
   const currentAnimationRef = useRef<VRMAnimation | undefined>(undefined)
+  const idleMotionStepRef = useRef<((delta: number) => void) | null>(null)
 
   const [models, setModels] = useState<FileRecord[]>([])
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined)
@@ -106,6 +108,7 @@ export function App(): JSX.Element {
     viewer.applyTheme(theme)
     const stop = startRenderLoop(viewer, (delta) => {
       animationHandleRef.current?.mixer.update(delta)
+      idleMotionStepRef.current?.(delta)
       currentVrmRef.current?.update(delta)
       autoBlinkStepRef.current?.(delta)
     })
@@ -149,7 +152,11 @@ export function App(): JSX.Element {
   const applyAnimationToVrm = (vrm: VRM) => {
     animationHandleRef.current?.mixer.stopAllAction()
     animationHandleRef.current = null
-    if (!currentAnimationRef.current) return
+    if (!currentAnimationRef.current) {
+      idleMotionStepRef.current = createIdleMotion(vrm)
+      return
+    }
+    idleMotionStepRef.current = null
     const handle = playVrmAnimation(vrm, currentAnimationRef.current)
     animationHandleRef.current = handle
     setAnimationPlaying(true)
@@ -269,6 +276,7 @@ export function App(): JSX.Element {
     currentAnimationRef.current = undefined
     setAnimationName(undefined)
     setAnimationPlaying(false)
+    idleMotionStepRef.current = currentVrmRef.current ? createIdleMotion(currentVrmRef.current) : null
   }
 
   const handleJoinRoom = (nextRoomId: string) => {
