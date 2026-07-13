@@ -131,11 +131,19 @@ export async function saveSharedProfile(
     updatedAt,
   }
 
-  storage?.setItem(profileFallbackKey, JSON.stringify(record))
+  try {
+    storage?.setItem(profileFallbackKey, JSON.stringify(record))
+  } catch {
+    /* localStorage quota exceeded or unavailable; when a backend is available the CID pointer below still makes this profile shareable */
+  }
 
   if (backend && storage) {
     const cid = await backend.store(jsonEncoder.encode(JSON.stringify(record)))
-    storage.setItem(profileCidKey, cid)
+    try {
+      storage.setItem(profileCidKey, cid)
+    } catch {
+      /* localStorage quota exceeded or unavailable; the profile is still stored via mistlib, just not discoverable via the CID pointer until the next successful write */
+    }
   }
 
   return { name, did: input.did, avatarMime: record.avatarMime, updatedAt, avatar: downscaled }

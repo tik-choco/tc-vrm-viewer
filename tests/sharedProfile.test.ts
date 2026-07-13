@@ -131,3 +131,14 @@ test('loadSharedProfile returns undefined when no backend, no CID pointer, and n
   const loaded = await loadSharedProfile(undefined, storage)
   assert.equal(loaded, undefined)
 })
+
+test('saveSharedProfile does not throw when localStorage setItem exceeds quota', async () => {
+  const backend = createMemoryBackend()
+  const storage = new MemoryStorage()
+  storage.setItem = () => {
+    throw new DOMException('Quota exceeded', 'QuotaExceededError')
+  }
+
+  const saved = await saveSharedProfile({ name: 'Ada', did: 'did:key:z6Mktest' }, backend, storage)
+  assert.equal(saved.name, 'Ada')
+})
