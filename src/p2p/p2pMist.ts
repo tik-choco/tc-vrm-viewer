@@ -39,7 +39,11 @@ export function getOrCreateNodeId(): string {
   const stored = storage?.getItem(nodeIdStorageKey)?.trim()
   if (stored) return stored
   const nodeId = makeId('node')
-  storage?.setItem(nodeIdStorageKey, nodeId)
+  try {
+    storage?.setItem(nodeIdStorageKey, nodeId)
+  } catch {
+    /* localStorage quota exceeded or unavailable; the node id still works for this session, it just won't be stable across reloads */
+  }
   return nodeId
 }
 

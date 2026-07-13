@@ -62,14 +62,14 @@ export async function ensureSharedDidIdentity(
 
   const fromBackend = backend && storage ? await readIdentityViaBackend(backend, storage) : undefined
   if (fromBackend) {
-    storage?.setItem(localMirrorKey, JSON.stringify(fromBackend))
+    setLocalMirror(storage, fromBackend)
     return fromBackend
   }
 
   const migrated = storage ? loadFromLegacyLocalStorage(storage) : undefined
   const identity = migrated ?? (await createDidIdentity())
   if (backend && storage) await writeIdentityViaBackend(backend, storage, identity)
-  storage?.setItem(localMirrorKey, JSON.stringify(identity))
+  setLocalMirror(storage, identity)
   return identity
 }
 
@@ -195,7 +195,20 @@ async function readIdentityViaBackend(backend: SharedStorageBackend, storage: Js
 
 async function writeIdentityViaBackend(backend: SharedStorageBackend, storage: JsonStorage, identity: DidIdentity): Promise<void> {
   const cid = await backend.store(jsonEncoder.encode(JSON.stringify(identity)))
-  storage.setItem(sharedIdentityCidKey, cid)
+  try {
+    storage.setItem(sharedIdentityCidKey, cid)
+  } catch {
+    /* localStorage quota exceeded or unavailable; the identity is still stored via mistlib, just not discoverable via the CID pointer until the next successful write */
+  }
+}
+
+/** Writes the local mirror, swallowing quota/unavailable-storage errors (the identity itself is still resolvable via mistlib storage when a backend is available). */
+function setLocalMirror(storage: JsonStorage | undefined, identity: DidIdentity): void {
+  try {
+    storage?.setItem(localMirrorKey, JSON.stringify(identity))
+  } catch {
+    /* ignore */
+  }
 }
 
 function loadFromLegacyLocalStorage(storage: JsonStorage): DidIdentity | undefined {
