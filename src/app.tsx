@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import type { JSX } from 'preact'
-import { Box, Film, FolderDown, Info, Moon, MousePointerClick, Smile, Sun, User, Wifi } from 'lucide-preact'
+import { Box, Film, FolderDown, Info, Monitor, Moon, MousePointerClick, Smile, Sun, User, Wifi } from 'lucide-preact'
 import type { VRM } from '@pixiv/three-vrm'
 import { DropZone } from './components/DropZone.js'
 import { ModelLibrary } from './components/ModelLibrary.js'
@@ -54,6 +54,40 @@ function setLastModelId(id: string | undefined): void {
   }
 }
 
+type Theme = 'light' | 'dark' | 'system'
+
+const THEME_STORAGE_KEY = 'tcvrm-theme'
+
+function isTheme(value: string | null): value is Theme {
+  return value === 'light' || value === 'dark' || value === 'system'
+}
+
+function getStoredTheme(): Theme {
+  try {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY)
+    return isTheme(stored) ? stored : 'system'
+  } catch {
+    return 'system'
+  }
+}
+
+/** 'system' clears data-theme so the prefers-color-scheme fallback in styles.css takes over; explicit choices set it. */
+function applyDocumentTheme(theme: Theme): void {
+  if (theme === 'system') {
+    document.documentElement.removeAttribute('data-theme')
+  } else {
+    document.documentElement.dataset.theme = theme
+  }
+}
+
+/** The theme actually in effect: 'system' resolved against the OS scheme, for consumers (the 3D viewer) that only know light/dark. */
+function resolveTheme(theme: Theme): 'light' | 'dark' {
+  if (theme === 'system') {
+    return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  }
+  return theme
+}
+
 export function App(): JSX.Element {
   const canvasHostRef = useRef<HTMLDivElement | null>(null)
   const viewerRef = useRef<ViewerScene | null>(null)
@@ -87,25 +121,29 @@ export function App(): JSX.Element {
   /** Stable node id, resolved once and reused for both mistlib storage init and room joins (mistlib's runtime is a singleton). */
   const [nodeId] = useState(() => getOrCreateNodeId())
 
-  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
-  )
+  const [theme, setTheme] = useState<Theme>(() => getStoredTheme())
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    viewerRef.current?.applyTheme(theme)
+    applyDocumentTheme(theme)
+    viewerRef.current?.applyTheme(resolveTheme(theme))
     try {
-      localStorage.setItem('tcvrm-theme', theme)
+      localStorage.setItem(THEME_STORAGE_KEY, theme)
     } catch {
       /* storage may be unavailable (private mode); the in-memory theme still applies */
     }
+    if (theme !== 'system') return
+    // Follow OS theme changes live while 'system' is selected.
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleChange = () => viewerRef.current?.applyTheme(resolveTheme(theme))
+    media.addEventListener('change', handleChange)
+    return () => media.removeEventListener('change', handleChange)
   }, [theme])
 
   useEffect(() => {
     if (!canvasHostRef.current) return
     const viewer = createViewerScene(canvasHostRef.current)
     viewerRef.current = viewer
-    viewer.applyTheme(theme)
+    viewer.applyTheme(resolveTheme(theme))
     const stop = startRenderLoop(viewer, (delta) => {
       animationHandleRef.current?.mixer.update(delta)
       idleMotionStepRef.current?.(delta)
@@ -337,15 +375,35 @@ export function App(): JSX.Element {
         </div>
         <div class="app-bar__spacer" />
         <div class="app-bar__actions">
-          <button
-            type="button"
-            class="icon-button"
-            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+          <div class="theme-switch" role="group" aria-label="Theme">
+            <button
+              type="button"
+              aria-pressed={theme === 'light'}
+              aria-label="Light theme"
+              title="Light theme"
+              onClick={() => setTheme('light')}
+            >
+              <Sun size={16} />
+            </button>
+            <button
+              type="button"
+              aria-pressed={theme === 'system'}
+              aria-label="Match system theme"
+              title="Match system theme"
+              onClick={() => setTheme('system')}
+            >
+              <Monitor size={16} />
+            </button>
+            <button
+              type="button"
+              aria-pressed={theme === 'dark'}
+              aria-label="Dark theme"
+              title="Dark theme"
+              onClick={() => setTheme('dark')}
+            >
+              <Moon size={16} />
+            </button>
+          </div>
           <a
             class="icon-button"
             href="https://github.com/tik-choco/tc-vrm-viewer"
