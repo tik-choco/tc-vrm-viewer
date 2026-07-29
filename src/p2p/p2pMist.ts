@@ -50,6 +50,20 @@ export function getOrCreateNodeId(): string {
 let mistRuntimeInitKey = ''
 
 /**
+ * Nostr signaling discovery namespace shared by every tik-choco app: two
+ * peers only find each other when both `inviteSalt` and `inviteCode` match,
+ * so this MUST equal `MIST_INVITE_SALT`/`MIST_INVITE_CODE` in
+ * protocol/docs/data-contracts/reference/mistSignaling.ts exactly, or this
+ * app silently splits into its own empty-room island. Duplicated here (not
+ * imported) because this app vendors mistlib-wasm directly under
+ * src/vendor/ instead of going through the shared wrapper package, and is
+ * not one of the apps protocol/scripts/sync-vendored.mjs distributes
+ * mistSignaling.ts to -- so there is no automated drift check on this pair.
+ */
+const mistInviteSalt = 'tik-choco-v1'
+const mistInviteCode = 'tik-choco-public-v1'
+
+/**
  * Initializes the mistlib runtime with the given node id, once. mistlib is
  * a singleton wasm runtime: calling init_with_config a second time with a
  * different id would clobber the first initialization, so every caller
@@ -58,7 +72,7 @@ let mistRuntimeInitKey = ''
  */
 export function ensureMistRuntime(mist: Pick<MistModule, 'init_with_config'>, nodeId: string): void {
   if (mistRuntimeInitKey === nodeId) return
-  mist.init_with_config(nodeId, JSON.stringify({ signaling: { mode: 'nostr', nostr: { relays: [] } } }))
+  mist.init_with_config(nodeId, JSON.stringify({ signaling: { mode: 'nostr', nostr: { relays: [], inviteSalt: mistInviteSalt, inviteCode: mistInviteCode } } }))
   mistRuntimeInitKey = nodeId
 }
 
