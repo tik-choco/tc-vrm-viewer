@@ -36,7 +36,7 @@ export function ProfilePanel({ storageAvailable, name, did, avatarUrl, onSave }:
     >
       {!storageAvailable && (
         <p class="banner banner--info">
-          mistlib storage is unavailable (not vendored, or failed to load); the profile is saved locally to this app only
+          mistlib storage is unavailable (failed to load); the profile is saved locally to this app only
           (localStorage).
         </p>
       )}

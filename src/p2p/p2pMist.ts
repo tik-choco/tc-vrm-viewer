@@ -6,13 +6,13 @@ const decoder = new TextDecoder()
 let mistModulePromise: Promise<MistModule> | undefined
 
 /**
- * Loads the vendored mistlib wasm module. Returns undefined (never throws)
- * when the module has not been vendored via scripts/build-mistlib.sh, so
- * callers can show a setup hint instead of crashing the app.
+ * Loads the mistlib wasm module (npm dependency @tik-choco/mistlib). Returns
+ * undefined (never throws) if the module fails to load, so callers can show
+ * a setup hint instead of crashing the app.
  */
 export async function loadMistModule(): Promise<MistModule | undefined> {
   if (!mistModulePromise) {
-    mistModulePromise = import('../vendor/mistlib-wasm/mistlib_wasm.js').then(async (module) => {
+    mistModulePromise = import('@tik-choco/mistlib').then(async (module) => {
       await module.default()
       return module
     })
@@ -55,8 +55,8 @@ let mistRuntimeInitKey = ''
  * so this MUST equal `MIST_INVITE_SALT`/`MIST_INVITE_CODE` in
  * protocol/docs/data-contracts/reference/mistSignaling.ts exactly, or this
  * app silently splits into its own empty-room island. Duplicated here (not
- * imported) because this app vendors mistlib-wasm directly under
- * src/vendor/ instead of going through the shared wrapper package, and is
+ * imported) because this app calls the raw @tik-choco/mistlib wasm exports
+ * directly instead of going through the shared JS wrapper package, and is
  * not one of the apps protocol/scripts/sync-vendored.mjs distributes
  * mistSignaling.ts to -- so there is no automated drift check on this pair.
  */

@@ -28,7 +28,7 @@ export function loadEncryptedFileFromMist(cid: string, passphrase: string, runti
 
 async function loadEncryptedBundle<T>(kind: StoredBundleKind, cid: string, passphrase: string, runtime: MistRuntimeSettings): Promise<T> {
   const mist = await loadMistModule()
-  if (!mist) throw new Error('mistlib-wasm has not been built yet. Set MISTLIB_REPO in .env, then run npm run build:mistlib.')
+  if (!mist) throw new Error('Failed to load the mistlib P2P engine.')
   ensureMistRuntime(mist, runtime.nodeId ?? getOrCreateNodeId())
   const normalizedCid = cid.trim()
   const bytes = await loadStoredBytes(mist, kind, normalizedCid)
