@@ -1,6 +1,6 @@
 import type { FileRecord, FolderRecord } from '../storage/domain.js'
 
-export type MistModule = typeof import('../vendor/mistlib-wasm/mistlib_wasm.js')
+export type MistModule = typeof import('@tik-choco/mistlib')
 
 export type MistRoomController = Pick<MistModule, 'init_with_config' | 'join_room' | 'register_event_callback' | 'update_position'>
 

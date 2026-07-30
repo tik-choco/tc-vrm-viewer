@@ -158,7 +158,7 @@ export function TcStorageImportPanel({ mistAvailable, mist, nodeId, did, onImpor
     if (!share || share.type !== 'folder-share' || !share.folderId) return
     if (!mist) {
       setPhase('error')
-      setMessage('mistlib-wasm has not been built yet.')
+      setMessage('Failed to load the mistlib P2P engine.')
       return
     }
     if (!did) {
@@ -262,10 +262,7 @@ export function TcStorageImportPanel({ mistAvailable, mist, nodeId, did, onImpor
           </span>
           <span class="card__title">Share import unavailable</span>
         </div>
-        <p class="tc-import__setup-text">
-          mistlib-wasm has not been built yet. Set <code class="tc-import__code">MISTLIB_REPO</code> in{' '}
-          <code class="tc-import__code">.env</code>, then run <code class="tc-import__code">npm run build:mistlib</code>.
-        </p>
+        <p class="tc-import__setup-text">Failed to load the mistlib P2P engine. Try reloading the page.</p>
       </div>
     )
   }

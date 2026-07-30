@@ -17,8 +17,8 @@ Built with Preact · TypeScript · Vite · three.js / [@pixiv/three-vrm](https:/
 - 🌗 **Light & dark themes** — light by default, with a one-tap toggle that is
   remembered across sessions and applies to the 3D scene too.
 - 🔒 **Private by design** — all parsing and rendering happen in your browser.
-- 🤝 **tc-storage interop** — import VRM files from tc-storage bundles and, when
-  the optional P2P module is built, receive models from a share room.
+- 🤝 **tc-storage interop** — import VRM files from tc-storage bundles and
+  receive models from a share room over P2P.
 
 ## Getting started
 
@@ -30,20 +30,15 @@ npm run dev
 Then open the printed local URL. Drop a `.vrm` file onto the left panel to load
 your first model.
 
-## Building mistlib-wasm (optional P2P)
+## P2P (mistlib)
 
-The P2P receive feature needs `mistlib-wasm` built and vendored. mistlib is a
-private repository, so its URL is configured only via `.env` (gitignored).
+The P2P receive feature is powered by [`@tik-choco/mistlib`](https://www.npmjs.com/package/@tik-choco/mistlib),
+an ordinary npm dependency — no Rust toolchain, no separate build step, and no
+private repository access needed.
 
-```bash
-cp .env.example .env
-# set MISTLIB_REPO / MISTLIB_REF in .env
-npm run build:mistlib
-```
-
-Without this build, everything else (local VRM loading, bundle import, the model
-library, expressions, theming) still works — the P2P and Storage panels simply
-show setup instructions instead.
+If the module ever fails to load (e.g. an unsupported browser), the rest of the
+app (local VRM loading, bundle import, the model library, expressions, theming)
+still works — the P2P and Storage panels simply show a setup hint instead.
 
 ## Scripts
 
@@ -59,8 +54,9 @@ npm run preview   # preview the production build locally
 Pushing to `main` triggers the GitHub Pages workflow
 (`.github/workflows/deploy-pages.yml`), which builds with
 `VITE_BASE_PATH=/tc-vrm-viewer/` and publishes `dist/` to Pages. Set the
-repository's Pages source to "GitHub Actions". The committed mistlib-wasm
-artifacts are used as-is, so CI needs no access to the private mistlib repo.
+repository's Pages source to "GitHub Actions". `@tik-choco/mistlib` is
+installed from the public npm registry, so CI needs no access to any private
+repository.
 
 ## Third-party licenses
 

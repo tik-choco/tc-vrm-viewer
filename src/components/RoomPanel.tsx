@@ -30,10 +30,7 @@ export function RoomPanel({ mistAvailable, roomId, connected, peers, lastSenderP
           </span>
           <span class="card__title">Live rooms unavailable</span>
         </div>
-        <p class="room-panel__setup-text">
-          mistlib-wasm has not been built yet. Set <code class="room-panel__code">MISTLIB_REPO</code> in{' '}
-          <code class="room-panel__code">.env</code>, then run <code class="room-panel__code">npm run build:mistlib</code>.
-        </p>
+        <p class="room-panel__setup-text">Failed to load the mistlib P2P engine. Try reloading the page.</p>
       </div>
     )
   }
