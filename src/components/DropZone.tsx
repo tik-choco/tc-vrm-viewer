@@ -36,14 +36,14 @@ export function DropZone({ onFiles }: DropZoneProps): JSX.Element {
       <span class="drop-zone__icon" aria-hidden="true">
         <Upload size={20} />
       </span>
-      <p class="drop-zone__title">Drop a VRM model here</p>
-      <p class="drop-zone__hint">.vrm file or bundle JSON</p>
+      <p class="drop-zone__title">Drop a model here</p>
+      <p class="drop-zone__hint">.vrm, .glb, or bundle JSON</p>
       <label class="drop-zone__picker btn btn--sm">
         Choose a file
         <input
           type="file"
           class="drop-zone__input"
-          accept=".vrm,.json"
+          accept=".vrm,.glb,.json"
           multiple
           onChange={handleInputChange}
         />

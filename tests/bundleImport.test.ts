@@ -70,7 +70,7 @@ test('throws on JSON that is not a recognizable bundle', () => {
   assert.throws(() => parseBundleJson(JSON.stringify({ hello: 'world' })), /Not a recognizable/)
 })
 
-test('skips non-VRM files by mimeType and extension', () => {
+test('skips files without a model mimeType or extension', () => {
   const bundle: FolderBundle = {
     version: 1,
     exportedAt: '2026-01-01T00:00:00.000Z',
@@ -92,6 +92,20 @@ test('recognizes VRM files by extension even without the exact mimeType', () => 
   }
   const result = parseBundleJson(JSON.stringify(bundle))
   assert.equal(result.length, 1)
+})
+
+test('recognizes GLB files by extension even without the exact mimeType', () => {
+  const bundle: FileBundle = {
+    version: 1,
+    exportedAt: '2026-01-01T00:00:00.000Z',
+    originNode: 'node-1',
+    folder: baseFolder(),
+    file: vrmFileRecord({ name: 'model.GLB', mimeType: 'application/octet-stream' }),
+  }
+  const result = parseBundleJson(JSON.stringify(bundle))
+  assert.equal(result.length, 1)
+  assert.equal(result[0].name, 'model.GLB')
+  assert.deepEqual([...result[0].bytes], [1, 2, 3, 4])
 })
 
 test('bytesFromDataUrl decodes base64 dataUrl round-trip', () => {

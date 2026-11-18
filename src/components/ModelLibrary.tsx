@@ -23,7 +23,7 @@ export function ModelLibrary({ models, selectedId, onSelect, onRemove }: ModelLi
           <span class="empty-state__icon" aria-hidden="true">
             <Boxes size={22} />
           </span>
-          <p class="empty-state__text">No saved models yet. Drop a VRM file to add one.</p>
+          <p class="empty-state__text">No saved models yet. Drop a .vrm or .glb file to add one.</p>
         </div>
       ) : (
         <ul class="model-library__list">

@@ -10,8 +10,8 @@ import { MetaPanel } from './components/MetaPanel.js'
 import { RoomPanel } from './components/RoomPanel.js'
 import { ProfilePanel } from './components/ProfilePanel.js'
 import { TcStorageImportPanel } from './components/TcStorageImportPanel.js'
-import { createViewerScene, startRenderLoop, type ViewerScene } from './viewer/scene.js'
-import { loadVrmFromBytes, replaceVrmInScene, vrmMetaSummary, type VrmMeta } from './viewer/vrmLoader.js'
+import { createViewerScene, frameModel, startRenderLoop, type ViewerScene } from './viewer/scene.js'
+import { disposeModel, loadModelFromBytes, vrmMetaSummary, type LoadedModel, type VrmMeta } from './viewer/vrmLoader.js'
 import { createAutoBlink, getExpressionWeight, listExpressionNames, setExpressionWeight } from './viewer/expressions.js'
 import { loadVrmAnimationFromBytes, playVrmAnimation, type VRMAnimation, type VrmAnimationHandle } from './viewer/vrmAnimation.js'
 import { createIdleMotion } from './viewer/idleMotion.js'
@@ -91,7 +91,8 @@ function resolveTheme(theme: Theme): 'light' | 'dark' {
 export function App(): JSX.Element {
   const canvasHostRef = useRef<HTMLDivElement | null>(null)
   const viewerRef = useRef<ViewerScene | null>(null)
-  const currentVrmRef = useRef<VRM | undefined>(undefined)
+  const currentModelRef = useRef<LoadedModel | undefined>(undefined)
+  const modelLoadIdRef = useRef(0)
   const autoBlinkStepRef = useRef<((delta: number) => void) | null>(null)
   const mistRef = useRef<MistModule | undefined>(undefined)
   const animationHandleRef = useRef<VrmAnimationHandle | null>(null)
@@ -145,13 +146,22 @@ export function App(): JSX.Element {
     viewerRef.current = viewer
     viewer.applyTheme(resolveTheme(theme))
     const stop = startRenderLoop(viewer, (delta) => {
-      animationHandleRef.current?.mixer.update(delta)
-      idleMotionStepRef.current?.(delta)
-      currentVrmRef.current?.update(delta)
-      autoBlinkStepRef.current?.(delta)
+      const model = currentModelRef.current
+      if (model?.kind === 'vrm') {
+        animationHandleRef.current?.mixer.update(delta)
+        idleMotionStepRef.current?.(delta)
+        model.vrm.update(delta)
+        autoBlinkStepRef.current?.(delta)
+      } else {
+        model?.mixer?.update(delta)
+      }
     })
     return () => {
       stop()
+      stopVrmAnimation()
+      if (currentModelRef.current) disposeModel(currentModelRef.current)
+      currentModelRef.current = undefined
+      viewerRef.current = null
       viewer.dispose()
     }
   }, [])
@@ -187,9 +197,16 @@ export function App(): JSX.Element {
     })
   }, [])
 
-  const applyAnimationToVrm = (vrm: VRM) => {
-    animationHandleRef.current?.mixer.stopAllAction()
+  const stopVrmAnimation = () => {
+    const handle = animationHandleRef.current
+    if (!handle) return
+    handle.mixer.stopAllAction()
+    handle.mixer.uncacheRoot(handle.mixer.getRoot())
     animationHandleRef.current = null
+  }
+
+  const applyAnimationToVrm = (vrm: VRM) => {
+    stopVrmAnimation()
     if (!currentAnimationRef.current) {
       idleMotionStepRef.current = createIdleMotion(vrm)
       return
@@ -200,21 +217,46 @@ export function App(): JSX.Element {
     setAnimationPlaying(true)
   }
 
-  const showVrmBytes = async (bytes: Uint8Array) => {
+  const showModelBytes = async (bytes: Uint8Array, fileName: string) => {
+    const viewer = viewerRef.current
+    if (!viewer) return
+    const loadId = ++modelLoadIdRef.current
     try {
-      const vrm = await loadVrmFromBytes(bytes)
-      if (!viewerRef.current) return
-      replaceVrmInScene(viewerRef.current.scene, currentVrmRef.current, vrm)
-      currentVrmRef.current = vrm
-      setMeta(vrmMetaSummary(vrm))
-      const names = listExpressionNames(vrm)
-      setExpressionNames(names)
-      setWeights(Object.fromEntries(names.map((name) => [name, getExpressionWeight(vrm, name)])))
-      autoBlinkStepRef.current = autoBlink ? createAutoBlink(vrm) : null
-      applyAnimationToVrm(vrm)
+      const model = await loadModelFromBytes(bytes)
+      if (viewerRef.current !== viewer || modelLoadIdRef.current !== loadId) {
+        disposeModel(model)
+        return
+      }
+      const previous = currentModelRef.current
+      stopVrmAnimation()
+      if (previous) disposeModel(previous)
+      currentModelRef.current = model
+      viewer.scene.add(model.scene)
+
+      if (model.kind === 'vrm') {
+        if (previous?.kind === 'gltf') viewer.controls.reset()
+        const { vrm } = model
+        setMeta(vrmMetaSummary(vrm))
+        const names = listExpressionNames(vrm)
+        setExpressionNames(names)
+        setWeights(Object.fromEntries(names.map((name) => [name, getExpressionWeight(vrm, name)])))
+        autoBlinkStepRef.current = autoBlink ? createAutoBlink(vrm) : null
+        applyAnimationToVrm(vrm)
+      } else {
+        if (previous?.kind !== 'gltf') viewer.controls.saveState()
+        frameModel(viewer, model.size)
+        setMeta({ name: fileName || model.name, authors: [] })
+        setExpressionNames([])
+        setWeights({})
+        autoBlinkStepRef.current = null
+        idleMotionStepRef.current = null
+        setAnimationPlaying(false)
+      }
       setError(undefined)
     } catch {
-      setError('Failed to load the VRM file')
+      if (viewerRef.current === viewer && modelLoadIdRef.current === loadId) {
+        setError('Failed to load the model file')
+      }
     }
   }
 
@@ -223,11 +265,11 @@ export function App(): JSX.Element {
       try {
         if (file.name.toLowerCase().endsWith('.json')) {
           const text = await file.text()
-          const vrmFiles = parseBundleJson(text)
-          for (const vrmFile of vrmFiles) {
-            const dataUrl = bytesToDataUrl(vrmFile.bytes, vrmFile.mimeType)
-            const checksum = await checksumOf(vrmFile.bytes)
-            const record = await addModelToLibrary({ name: vrmFile.name, mimeType: vrmFile.mimeType, size: vrmFile.size, dataUrl, checksum })
+          const modelFiles = parseBundleJson(text)
+          for (const modelFile of modelFiles) {
+            const dataUrl = bytesToDataUrl(modelFile.bytes, modelFile.mimeType)
+            const checksum = await checksumOf(modelFile.bytes)
+            const record = await addModelToLibrary({ name: modelFile.name, mimeType: modelFile.mimeType, size: modelFile.size, dataUrl, checksum })
             setModels((prev) => [record, ...prev])
           }
         } else {
@@ -238,7 +280,7 @@ export function App(): JSX.Element {
           setModels((prev) => [record, ...prev])
           setSelectedId(record.id)
           setLastModelId(record.id)
-          await showVrmBytes(bytes)
+          await showModelBytes(bytes, record.name)
         }
       } catch {
         setError(`Failed to import ${file.name}`)
@@ -254,7 +296,7 @@ export function App(): JSX.Element {
     const binary = atob(model.dataUrl.slice(commaIndex + 1))
     const bytes = new Uint8Array(binary.length)
     for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
-    await showVrmBytes(bytes)
+    await showModelBytes(bytes, model.name)
   }
 
   const handleImportTcStorageFile = async (file: FileRecord) => {
@@ -265,7 +307,7 @@ export function App(): JSX.Element {
     setModels((prev) => [record, ...prev])
     setSelectedId(record.id)
     setLastModelId(record.id)
-    await showVrmBytes(bytes)
+    await showModelBytes(bytes, record.name)
   }
 
   const handleRemoveModel = async (model: FileRecord) => {
@@ -278,14 +320,16 @@ export function App(): JSX.Element {
   }
 
   const handleExpressionChange = (name: string, weight: number) => {
-    if (!currentVrmRef.current) return
-    setExpressionWeight(currentVrmRef.current, name, weight)
+    const model = currentModelRef.current
+    if (model?.kind !== 'vrm') return
+    setExpressionWeight(model.vrm, name, weight)
     setWeights((prev) => ({ ...prev, [name]: weight }))
   }
 
   const handleToggleAutoBlink = (enabled: boolean) => {
     setAutoBlink(enabled)
-    autoBlinkStepRef.current = enabled && currentVrmRef.current ? createAutoBlink(currentVrmRef.current) : null
+    const model = currentModelRef.current
+    autoBlinkStepRef.current = enabled && model?.kind === 'vrm' ? createAutoBlink(model.vrm) : null
   }
 
   const handleLoadAnimationFile = async (file: File) => {
@@ -294,7 +338,8 @@ export function App(): JSX.Element {
       const animation = await loadVrmAnimationFromBytes(bytes)
       currentAnimationRef.current = animation
       setAnimationName(file.name)
-      if (currentVrmRef.current) applyAnimationToVrm(currentVrmRef.current)
+      const model = currentModelRef.current
+      if (model?.kind === 'vrm') applyAnimationToVrm(model.vrm)
       setError(undefined)
     } catch {
       setError(`Failed to load animation ${file.name}`)
@@ -309,12 +354,12 @@ export function App(): JSX.Element {
   }
 
   const handleClearAnimation = () => {
-    animationHandleRef.current?.mixer.stopAllAction()
-    animationHandleRef.current = null
+    stopVrmAnimation()
     currentAnimationRef.current = undefined
     setAnimationName(undefined)
     setAnimationPlaying(false)
-    idleMotionStepRef.current = currentVrmRef.current ? createIdleMotion(currentVrmRef.current) : null
+    const model = currentModelRef.current
+    idleMotionStepRef.current = model?.kind === 'vrm' ? createIdleMotion(model.vrm) : null
   }
 
   const handleJoinRoom = (nextRoomId: string) => {
@@ -432,7 +477,7 @@ export function App(): JSX.Element {
           {!meta && (
             <div class="viewer-hint">
               <MousePointerClick size={15} />
-              <span>Drop a .vrm file or pick one from your library to begin</span>
+              <span>Drop a .vrm or .glb file, or pick one from your library to begin</span>
             </div>
           )}
         </main>
@@ -466,7 +511,7 @@ export function App(): JSX.Element {
             <AnimationPanel
               animationName={animationName}
               isPlaying={animationPlaying}
-              hasModel={Boolean(meta)}
+              hasModel={currentModelRef.current?.kind === 'vrm'}
               onLoadFile={handleLoadAnimationFile}
               onTogglePlaying={handleToggleAnimationPlaying}
               onClear={handleClearAnimation}

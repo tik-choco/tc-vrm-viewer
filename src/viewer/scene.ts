@@ -18,13 +18,15 @@ const GRID_COLORS: Record<ViewerTheme, { center: number; lines: number }> = {
   dark: { center: 0x353a44, lines: 0x22262e },
 }
 
+const DEFAULT_CAMERA_DISTANCE = 3
+
 export function createViewerScene(container: HTMLElement): ViewerScene {
   const scene = new THREE.Scene()
   // Transparent: the theme-aware CSS gradient on the host element shows through.
   scene.background = null
 
   const camera = new THREE.PerspectiveCamera(30, container.clientWidth / container.clientHeight, 0.1, 100)
-  camera.position.set(0, 1.3, 3)
+  camera.position.set(0, 1.3, DEFAULT_CAMERA_DISTANCE)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -83,6 +85,19 @@ export function createViewerScene(container: HTMLElement): ViewerScene {
       renderer.domElement.remove()
     },
   }
+}
+
+export function frameModel({ camera, controls }: ViewerScene, size: THREE.Vector3): void {
+  const aspect = Number.isFinite(camera.aspect) && camera.aspect > 0 ? camera.aspect : 1
+  const halfVerticalFov = THREE.MathUtils.degToRad(camera.fov / 2)
+  const halfHorizontalFov = Math.atan(Math.tan(halfVerticalFov) * aspect)
+  const halfFov = Math.min(halfVerticalFov, halfHorizontalFov)
+  const radius = size.length() / 2
+  const distance = Math.max(DEFAULT_CAMERA_DISTANCE, 1.1 * radius / Math.sin(halfFov))
+  const direction = new THREE.Vector3(0, 0.3, 1).normalize()
+  controls.target.set(0, size.y / 2, 0)
+  camera.position.copy(controls.target).addScaledVector(direction, distance)
+  controls.update()
 }
 
 export function startRenderLoop(viewer: ViewerScene, onFrame: (deltaSeconds: number) => void): () => void {

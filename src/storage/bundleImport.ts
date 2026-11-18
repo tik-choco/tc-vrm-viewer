@@ -1,22 +1,22 @@
 import type { FileBundle, FileRecord, FolderBundle } from './domain.js'
 
-export type ImportedVrmFile = {
+export type ImportedModelFile = {
   name: string
   mimeType: string
   size: number
   bytes: Uint8Array
 }
 
-const VRM_EXTENSION = /\.vrm$/i
-const VRM_MIME_TYPE = 'model/gltf-binary'
+const MODEL_EXTENSION = /\.(vrm|glb)$/i
+const MODEL_MIME_TYPE = 'model/gltf-binary'
 
 /**
  * Parses a FolderBundle or FileBundle JSON string (per tc-storage's
- * bundle export format) and returns the VRM files it contains, decoded
- * from their dataUrl. Non-VRM files are skipped. Throws on invalid JSON
+ * bundle export format) and returns the VRM and GLB files it contains,
+ * decoded from their dataUrl. Throws on invalid JSON
  * or a JSON shape that isn't a recognizable bundle.
  */
-export function parseBundleJson(raw: string): ImportedVrmFile[] {
+export function parseBundleJson(raw: string): ImportedModelFile[] {
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
@@ -25,7 +25,7 @@ export function parseBundleJson(raw: string): ImportedVrmFile[] {
   }
   const files = fileRecordsFromBundle(parsed)
   if (!files) throw new Error('Not a recognizable FolderBundle or FileBundle')
-  return files.filter(isVrmFileRecord).map(fileRecordToImportedVrm)
+  return files.filter(isModelFileRecord).map(fileRecordToImportedModel)
 }
 
 function fileRecordsFromBundle(value: unknown): FileRecord[] | undefined {
@@ -37,14 +37,14 @@ function fileRecordsFromBundle(value: unknown): FileRecord[] | undefined {
   return undefined
 }
 
-function isVrmFileRecord(file: FileRecord): boolean {
-  return Boolean(file.dataUrl) && (file.mimeType === VRM_MIME_TYPE || VRM_EXTENSION.test(file.name))
+function isModelFileRecord(file: FileRecord): boolean {
+  return Boolean(file.dataUrl) && (file.mimeType === MODEL_MIME_TYPE || MODEL_EXTENSION.test(file.name))
 }
 
-function fileRecordToImportedVrm(file: FileRecord): ImportedVrmFile {
+function fileRecordToImportedModel(file: FileRecord): ImportedModelFile {
   return {
     name: file.name,
-    mimeType: file.mimeType || VRM_MIME_TYPE,
+    mimeType: file.mimeType || MODEL_MIME_TYPE,
     size: file.size,
     bytes: bytesFromDataUrl(file.dataUrl as string),
   }
